@@ -1,0 +1,7 @@
+C:\Users\matej\source\repos\Cheems\Cheems\bin\Debug\Cheems.exe.config
+C:\Users\matej\source\repos\Cheems\Cheems\bin\Debug\Cheems.exe
+C:\Users\matej\source\repos\Cheems\Cheems\bin\Debug\Cheems.pdb
+C:\Users\matej\source\repos\Cheems\Cheems\obj\Debug\Cheems.csprojAssemblyReference.cache
+C:\Users\matej\source\repos\Cheems\Cheems\obj\Debug\Cheems.csproj.CoreCompileInputs.cache
+C:\Users\matej\source\repos\Cheems\Cheems\obj\Debug\Cheems.exe
+C:\Users\matej\source\repos\Cheems\Cheems\obj\Debug\Cheems.pdb
