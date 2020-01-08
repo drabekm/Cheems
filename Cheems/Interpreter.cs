@@ -25,6 +25,10 @@ namespace Cheems
             code = new LinkedList<string>();
         }
 
+        /// <summary>
+        /// Opens a file dialog window to select cheems code file and loads it's contents into the "code" variable
+        /// </summary>
+        /// <returns>Returns true if succesfull</returns>
         public bool GetCode()
         {
             string filePath;
@@ -65,19 +69,19 @@ namespace Cheems
         /// <summary>
         /// Analyses the supplied code and checks if it's valid.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Returns true if the code is correct</returns>
         public bool Analyse()
-        {
-            /* Iterates line after line. 
-             * DoLexycalLine get's tokens from a supplied line and returns them in a queue.
-             * That stack of tokens is then given to a DoSyntactical function that does more analysis duh
-             */
-
+        {           
             Queue<Token> tokenqueue;
             for (int lineCounter = 0; lineCounter < code.Count; lineCounter++)
             {
-                tokenqueue = DoLexicalLine(code.ElementAt(lineCounter));
-                DoSyntacticalLine(tokenqueue);
+                tokenqueue = DoLexicalAnalysis(code.ElementAt(lineCounter));
+                //TODO: delete this shit later                            
+                /*while(tokenqueue.Count != 0)
+                {
+                    Console.WriteLine(tokenqueue.Dequeue());
+                }*/
+                DoSyntacticalAnalysis(tokenqueue);
             }
             
 
@@ -88,30 +92,87 @@ namespace Cheems
         /// Analyses lexems in a code line and returns them as a queue of tokens
         /// </summary>
         /// <param name="line">A line of code to analise</param>
-        /// <returns>Queue of tokens</returns>
-        private Queue<Token> DoLexicalLine(string line)
+        /// <returns>Returns a queue of tokens from "line"</returns>
+        private Queue<Token> DoLexicalAnalysis(string line)
         {
             Queue<Token> tokens = new Queue<Token>();
+            Token tempToken;
             string[] lexems = line.Split(' ', '"');
-            Token token;
+            
             for (int i = 0; i < lexems.Length; i++)
             {
                 switch(lexems[i])
                 {
                     case "imt":
-                        token = new Token( (int)Token.Types.integer, "imt");
+                        tempToken = new Token(Token.Type.dataType, "int");
                         break;
                     case "float":
-                        token = new Token((int)Token.Types.floatingPoint, "float");
+                        tempToken = new Token(Token.Type.dataType, "float");
                         break;
                     case "strimg":
-                        token = new Token((int)Token.Types.strng, "strimg");
+                        tempToken = new Token(Token.Type.dataType, "string");
                         break;
-                    default:
-                        token = new Token((int)Token.Types.id, lexems[i]);
+                    case "boleam":
+                        tempToken = new Token(Token.Type.dataType, "bool");
+                        break;
+                    case "if":
+                        tempToken = new Token(Token.Type.ifCondition, "if");
+                        break;
+                    case "while":
+                        tempToken = new Token(Token.Type.whileCycle, "while");
+                        break;
+                    case "for":
+                        tempToken = new Token(Token.Type.forCycle, "for");
+                        break;
+                    case "=":
+                        tempToken = new Token(Token.Type.assignment, "=");
+                        break;
+                    case "==":
+                        tempToken = new Token(Token.Type.compare, "==");
+                        break;
+                    case ">":
+                        tempToken = new Token(Token.Type.compare, ">");
+                        break;
+                    case "=>":
+                        tempToken = new Token(Token.Type.compare, "=>");
+                        break;
+                    case "<":
+                        tempToken = new Token(Token.Type.compare, "<");
+                        break;
+                    case "=<":
+                        tempToken = new Token(Token.Type.compare, "=<");
+                        break;
+                    case "+":
+                        tempToken = new Token(Token.Type.mathOperation, "+");
+                        break;
+                    case "-":
+                        tempToken = new Token(Token.Type.compare, "-");
+                        break;
+                    case "*":
+                        tempToken = new Token(Token.Type.compare, "*");
+                        break;
+                    case "/":
+                        tempToken = new Token(Token.Type.compare, "/");
+                        break;                    
+                    default: // Default has to check if it's a constant i.e. a number or if it's a variable name
+                        int intResult;
+                        float floatResult;
+                        if(int.TryParse(lexems[i], out intResult))
+                        {
+                            tempToken = new Token(Token.Type.constant, intResult.ToString());
+                        }
+                        else if (float.TryParse(lexems[i], out floatResult))
+                        {
+                            tempToken = new Token(Token.Type.constant, intResult.ToString());
+                        }
+                        else
+                        {
+                            tempToken = new Token(Token.Type.id, lexems[i]);
+                        }
+                        
                         break;
                 }
-                tokens.Enqueue(token);              
+                tokens.Enqueue(tempToken);              
             }
             return tokens;
         }
@@ -121,19 +182,86 @@ namespace Cheems
         /// </summary>
         /// <param name="tokens">Queue of tokens</param>
         /// <returns>True or false depending on if the tokens are in valid order</returns>
-        private bool DoSyntacticalLine(Queue<Token> tokens)
+        private bool DoSyntacticalAnalysis(Queue<Token> tokens)
         {
             int lexemAmount = tokens.Count;
-            int index = 0;
-            Token currentToken = tokens.Dequeue();
+            int index = 1;
+            Token firstToken = tokens.Dequeue();
+
+            //Helper variables to determine if the syntax is correct
+            Token.Type expectedType = Token.Type.nothing;
+            Token.Type expectedType2 = Token.Type.nothing;
+            bool isAssignmentDone = false;
+
+            switch (firstToken.type) // Type of the first token determins the syntax rules that will be used
+            {
+                case Token.Type.ifCondition:
+                    expectedType = Token.Type.id;
+                    break;
+                case Token.Type.id:
+                    expectedType = Token.Type.assignment;
+                    break;
+                case Token.Type.dataType:
+                    expectedType = Token.Type.id;
+                    break;
+            }
+
+            //"currentToken" var has to be the same value as the "expectedType" var
+            //If the condition is passed the "expectedType" var updates 
             while (index < lexemAmount - 1)
             {
+                Token currentToken = tokens.Dequeue();
+                if(firstToken.type == Token.Type.id || firstToken.type == Token.Type.dataType)
+                {
+                    if (currentToken.type == expectedType || currentToken.type == expectedType2)
+                    {
+                        if (currentToken.type == Token.Type.assignment)
+                        {
+                            isAssignmentDone = true;
+                            expectedType = Token.Type.id;
+                            expectedType2 = Token.Type.constant;
+                        }
+                        else if (currentToken.type == Token.Type.id)
+                        {
+                            if (isAssignmentDone)
+                            {
+                                expectedType = Token.Type.mathOperation;
+                                expectedType2 = Token.Type.nothing;
+                            }
+                            else
+                            {
+                                expectedType = Token.Type.assignment;
+                                expectedType2 = Token.Type.nothing;
+                            }
+                        }
+                        else if (currentToken.type == Token.Type.mathOperation)
+                        {
+                            expectedType = Token.Type.id;
+                            expectedType2 = Token.Type.constant;
+                        }                                               
+                    }
+                    else
+                    {
+                        Console.WriteLine("Line failed");
+                        return false; // failed some of the rules
+                    }
+                }
+                
+                if (firstToken.type == Token.Type.ifCondition) //Syntax rules for an if statement
+                {                    
+                    if(currentToken.type == expectedType)
+                    {
+
+                    }
+
+                }
                 //TODO: remove this shit
-                Console.WriteLine(currentToken.content);
-                currentToken = tokens.Dequeue();
+                /*Console.WriteLine(currentToken.content);
+                currentToken = tokens.Dequeue();*/
                 index++;
             }
-            Console.WriteLine(currentToken.content);
+            Console.WriteLine("Line passed");
+            //Console.WriteLine(currentToken.content);
 
             return true;
         }

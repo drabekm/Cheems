@@ -8,18 +8,24 @@ namespace Cheems
 {
     class Token
     {
-        public enum Types
+        public enum Type
         {
-            id, integer, floatingPoint, strng, 
+            dataType, constant, id, whileCycle, forCycle, ifCondition,
+            assignment, compare, mathOperation, nothing 
         }
 
-        public int type { get; set; }
+        public Type type { get; set; }
         public string content { get; set; }
 
-        public Token(int type, string content)
+        public Token(Type type, string content)
         {
             this.type = type;
             this.content = content;
+        }
+
+        public override string ToString()
+        {
+            return "<" + type + "> " + content;
         }
 
     }
