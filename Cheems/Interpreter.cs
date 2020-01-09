@@ -75,16 +75,12 @@ namespace Cheems
             Queue<Token> tokenqueue;
             for (int lineCounter = 0; lineCounter < code.Count; lineCounter++)
             {
-                tokenqueue = DoLexicalAnalysis(code.ElementAt(lineCounter));
-                //TODO: delete this shit later                            
-                /*while(tokenqueue.Count != 0)
+                tokenqueue = DoLexicalAnalysis(code.ElementAt(lineCounter));            
+                if( !DoSyntacticalAnalysis(tokenqueue) )
                 {
-                    Console.WriteLine(tokenqueue.Dequeue());
-                }*/
-                DoSyntacticalAnalysis(tokenqueue);
-            }
-            
-
+                    return false;
+                }
+            }            
             return true;
         }
 
@@ -97,7 +93,7 @@ namespace Cheems
         {
             Queue<Token> tokens = new Queue<Token>();
             Token tempToken;
-            string[] lexems = line.Split(' ', '"');
+            string[] lexems = line.Split(' ');//, '"');
             
             for (int i = 0; i < lexems.Length; i++)
             {
@@ -157,15 +153,20 @@ namespace Cheems
                     default: // Default has to check if it's a constant i.e. a number or if it's a variable name
                         int intResult;
                         float floatResult;
-                        if(int.TryParse(lexems[i], out intResult))
+
+                        if (lexems[i][0] == '"' && lexems[i][lexems[i].Length - 1] == '"') // lexem is an string constant
+                        {
+                            tempToken = new Token(Token.Type.constant, lexems[i].Trim('"'));
+                        }
+                        else if(int.TryParse(lexems[i], out intResult)) //lexem is an int constant
                         {
                             tempToken = new Token(Token.Type.constant, intResult.ToString());
                         }
-                        else if (float.TryParse(lexems[i], out floatResult))
+                        else if (float.TryParse(lexems[i], out floatResult)) // lexem is an float constant
                         {
                             tempToken = new Token(Token.Type.constant, intResult.ToString());
                         }
-                        else
+                        else //lexem is an variable id
                         {
                             tempToken = new Token(Token.Type.id, lexems[i]);
                         }
@@ -187,6 +188,7 @@ namespace Cheems
             int lexemAmount = tokens.Count;
             int index = 1;
             Token firstToken = tokens.Dequeue();
+            Token currentToken = null;
 
             //Helper variables to determine if the syntax is correct
             Token.Type expectedType = Token.Type.nothing;
@@ -197,6 +199,7 @@ namespace Cheems
             {
                 case Token.Type.ifCondition:
                     expectedType = Token.Type.id;
+                    expectedType2 = Token.Type.constant;
                     break;
                 case Token.Type.id:
                     expectedType = Token.Type.assignment;
@@ -208,9 +211,11 @@ namespace Cheems
 
             //"currentToken" var has to be the same value as the "expectedType" var
             //If the condition is passed the "expectedType" var updates 
-            while (index < lexemAmount - 1)
+            while (index < lexemAmount)
             {
-                Token currentToken = tokens.Dequeue();
+                currentToken = tokens.Dequeue();
+
+                //Syntax rules for variable definition and value assignment
                 if(firstToken.type == Token.Type.id || firstToken.type == Token.Type.dataType)
                 {
                     if (currentToken.type == expectedType || currentToken.type == expectedType2)
@@ -242,24 +247,71 @@ namespace Cheems
                     }
                     else
                     {
-                        Console.WriteLine("Line failed");
+                        Console.WriteLine("Definition line failed");
                         return false; // failed some of the rules
                     }
                 }
-                
-                if (firstToken.type == Token.Type.ifCondition) //Syntax rules for an if statement
+
+                //Syntax rules for an if statement
+                if (firstToken.type == Token.Type.ifCondition) 
                 {                    
                     if(currentToken.type == expectedType)
                     {
-
+                        if(currentToken.type == Token.Type.id || currentToken.type == Token.Type.constant)
+                        {
+                            expectedType = Token.Type.compare;
+                            expectedType2 = Token.Type.nothing;
+                        }
+                        if(currentToken.type == Token.Type.compare)
+                        {
+                            expectedType = Token.Type.id;
+                            expectedType2 = Token.Type.constant;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("if Line failed");
+                        return false;                        
                     }
 
                 }
-                //TODO: remove this shit
-                /*Console.WriteLine(currentToken.content);
-                currentToken = tokens.Dequeue();*/
+
+                //Syntax rules for a while cycle
+                if (firstToken.type == Token.Type.whileCycle)
+                {
+                    if(currentToken.type == expectedType)
+                    {
+                        if(currentToken.type == Token.Type.id || currentToken.type == Token.Type.constant)
+                        {
+                            expectedType = Token.Type.compare;
+                            expectedType2 = Token.Type.nothing;
+                        }
+                        else if (currentToken.type == Token.Type.compare)
+                        {
+                            expectedType = Token.Type.id;
+                            expectedType2 = Token.Type.constant;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("while line failed");
+                        return false;
+                    }
+                }
+
                 index++;
             }
+
+            //final syntax rules for variable initialization
+            //(initialization line must end with an id or constant)
+            if (firstToken.type == Token.Type.id || firstToken.type == Token.Type.dataType)
+            {
+                if(!(currentToken.type == Token.Type.id || currentToken.type == Token.Type.constant))
+                {
+                    return false;
+                }
+            }
+
             Console.WriteLine("Line passed");
             //Console.WriteLine(currentToken.content);
 
