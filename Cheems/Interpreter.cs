@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,7 +12,7 @@ namespace Cheems
     class Interpreter
     {
         private LinkedList<string> code;
-
+        private Hashtable variables = new Hashtable();
         public Interpreter()
         {
             code = new LinkedList<string>();
@@ -75,9 +76,10 @@ namespace Cheems
             Queue<Token> tokenqueue;
             for (int lineCounter = 0; lineCounter < code.Count; lineCounter++)
             {
-                tokenqueue = DoLexicalAnalysis(code.ElementAt(lineCounter));            
+                tokenqueue = DoLexicalAnalysis(code.ElementAt(lineCounter), ref variables);            
                 if( !DoSyntacticalAnalysis(tokenqueue) )
                 {
+                    Console.WriteLine("Syntax error at line: {0}", lineCounter);
                     return false;
                 }
             }            
@@ -89,7 +91,7 @@ namespace Cheems
         /// </summary>
         /// <param name="line">A line of code to analise</param>
         /// <returns>Returns a queue of tokens from "line"</returns>
-        private Queue<Token> DoLexicalAnalysis(string line)
+        private Queue<Token> DoLexicalAnalysis(string line, ref Hashtable variables)
         {
             Queue<Token> tokens = new Queue<Token>();
             Token tempToken;
@@ -100,55 +102,55 @@ namespace Cheems
                 switch(lexems[i])
                 {
                     case "imt":
-                        tempToken = new Token(Token.Type.dataType, "int");
+                        tempToken = new Token(Token.Type.dataType, Token.DataType.integer,  "int");
                         break;
                     case "float":
-                        tempToken = new Token(Token.Type.dataType, "float");
+                        tempToken = new Token(Token.Type.dataType, Token.DataType.floatPoint, "float");
                         break;
                     case "strimg":
-                        tempToken = new Token(Token.Type.dataType, "string");
+                        tempToken = new Token(Token.Type.dataType, Token.DataType.str, "string");
                         break;
                     case "boleam":
-                        tempToken = new Token(Token.Type.dataType, "bool");
+                        tempToken = new Token(Token.Type.dataType, Token.DataType.boolean, "bool");
                         break;
                     case "if":
-                        tempToken = new Token(Token.Type.ifCondition, "if");
+                        tempToken = new Token(Token.Type.ifCondition, Token.DataType.noDataType, "if");
                         break;
                     case "while":
-                        tempToken = new Token(Token.Type.whileCycle, "while");
+                        tempToken = new Token(Token.Type.whileCycle, Token.DataType.noDataType, "while");
                         break;
                     case "for":
-                        tempToken = new Token(Token.Type.forCycle, "for");
+                        tempToken = new Token(Token.Type.forCycle, Token.DataType.noDataType, "for");
                         break;
                     case "=":
-                        tempToken = new Token(Token.Type.assignment, "=");
+                        tempToken = new Token(Token.Type.assignment, Token.DataType.noDataType, "=");
                         break;
                     case "==":
-                        tempToken = new Token(Token.Type.compare, "==");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "==");
                         break;
                     case ">":
-                        tempToken = new Token(Token.Type.compare, ">");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, ">");
                         break;
                     case "=>":
-                        tempToken = new Token(Token.Type.compare, "=>");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "=>");
                         break;
                     case "<":
-                        tempToken = new Token(Token.Type.compare, "<");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "<");
                         break;
                     case "=<":
-                        tempToken = new Token(Token.Type.compare, "=<");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "=<");
                         break;
                     case "+":
-                        tempToken = new Token(Token.Type.mathOperation, "+");
+                        tempToken = new Token(Token.Type.mathOperation, Token.DataType.noDataType, "+");
                         break;
                     case "-":
-                        tempToken = new Token(Token.Type.compare, "-");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "-");
                         break;
                     case "*":
-                        tempToken = new Token(Token.Type.compare, "*");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "*");
                         break;
                     case "/":
-                        tempToken = new Token(Token.Type.compare, "/");
+                        tempToken = new Token(Token.Type.compare, Token.DataType.noDataType, "/");
                         break;                    
                     default: // Default has to check if it's a constant i.e. a number or if it's a variable name
                         int intResult;
@@ -156,19 +158,27 @@ namespace Cheems
 
                         if (lexems[i][0] == '"' && lexems[i][lexems[i].Length - 1] == '"') // lexem is an string constant
                         {
-                            tempToken = new Token(Token.Type.constant, lexems[i].Trim('"'));
+                            tempToken = new Token(Token.Type.constant, Token.DataType.str, lexems[i].Trim('"'));
                         }
                         else if(int.TryParse(lexems[i], out intResult)) //lexem is an int constant
                         {
-                            tempToken = new Token(Token.Type.constant, intResult.ToString());
+                            tempToken = new Token(Token.Type.constant, Token.DataType.integer, intResult.ToString());
                         }
                         else if (float.TryParse(lexems[i], out floatResult)) // lexem is an float constant
                         {
-                            tempToken = new Token(Token.Type.constant, intResult.ToString());
+                            tempToken = new Token(Token.Type.constant, Token.DataType.floatPoint, intResult.ToString());
                         }
                         else //lexem is an variable id
                         {
-                            tempToken = new Token(Token.Type.id, lexems[i]);
+                            tempToken = new Token(Token.Type.id, Token.DataType.noDataType, lexems[i]);
+                            if (tokens.Count > 0) //Checks if the previous token was a datatype. If so, it adds a variable to the hashtable
+                            {
+                                Token prevToken = tokens.Peek();
+                                if (prevToken.dataType != Token.DataType.noDataType && prevToken.dataType != Token.DataType.operatoR && prevToken.dataType != Token.DataType.comperator)
+                                {
+                                    variables.Add(tempToken.content, prevToken.content + ";" + 0);
+                                }
+                            }
                         }
                         
                         break;
@@ -176,6 +186,13 @@ namespace Cheems
                 tokens.Enqueue(tempToken);              
             }
             return tokens;
+        }
+
+        private  Queue<Token> MakeSemanticTokens(Queue<Token> tokens)
+        {
+            Queue<Token> semanticTokens = new Queue<Token>();
+
+            return semanticTokens;
         }
 
         /// <summary>
@@ -247,7 +264,6 @@ namespace Cheems
                     }
                     else
                     {
-                        Console.WriteLine("Definition line failed");
                         return false; // failed some of the rules
                     }
                 }
@@ -270,7 +286,6 @@ namespace Cheems
                     }
                     else
                     {
-                        Console.WriteLine("if Line failed");
                         return false;                        
                     }
 
@@ -318,5 +333,9 @@ namespace Cheems
             return true;
         }
 
+        private bool DoSemanticAnalysis()
+        {
+            return true;
+        }
     }
 }
